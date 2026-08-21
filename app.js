@@ -106,15 +106,11 @@ const i18n = {
 let currentLang = 'cz';
 let isAdmin = false;
 
-// Lightbox logic
-const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightbox-img');
-document.getElementById('lightbox-close').onclick = () => lightbox.classList.add('hidden');
-
-function openLightbox(url) {
-  lightboxImg.src = url;
-  lightbox.classList.remove('hidden');
-}
+// Language Selector
+document.getElementById('lang-select').onchange = (e) => {
+  currentLang = e.target.value;
+  renderProducts();
+};
 
 // Auth Observer
 onAuthStateChanged(auth, (user) => {
@@ -172,10 +168,10 @@ function renderProducts() {
     let adminControlsHTML = '';
     if (isAdmin) {
       adminControlsHTML = `
-        <div class="admin-edit">
-            <input type="number" id="input-${item.id}" value="${numericPrice}" />
+        <div class="admin-edit" style="margin-top: 8px; display: flex; gap: 8px;">
+            <input type="number" id="input-${item.id}" value="${numericPrice}" style="width: 100px;" />
             <button class="update-btn" data-id="${item.id}">${texts.updatePrice}</button>
-            <button class="toggle-sold-btn" data-id="${item.id}" data-sold="${item.isSold || false}">${texts.toggleSold}</button>
+            <button class="toggle-sold-btn danger-btn" data-id="${item.id}" data-sold="${item.isSold || false}">${texts.toggleSold}</button>
         </div>
       `;
     }
@@ -191,9 +187,6 @@ function renderProducts() {
       <button class="buy-btn" ${item.isSold ? 'disabled style="opacity:0.5;"' : ''}>${item.isSold ? texts.sold : texts.buyNow}</button>
       ${adminControlsHTML}
     `;
-
-    // Click image to expand lightbox
-    card.querySelector('.product-img').onclick = () => openLightbox(imgUrl);
 
     productList.appendChild(card);
   });
@@ -216,7 +209,7 @@ function renderProducts() {
   });
 }
 
-// Upload Artwork Image and Save Product
+// Save New Product
 document.getElementById('add-product-btn').onclick = async () => {
   const title = document.getElementById('new-title').value;
   const description = document.getElementById('new-desc').value;
@@ -245,7 +238,7 @@ document.getElementById('add-product-btn').onclick = async () => {
   fileInput.value = '';
 };
 
-// Toggle Admin Login
+// Admin Login/Logout Events
 document.getElementById('admin-toggle-btn').onclick = () => {
   document.getElementById('admin-panel').classList.toggle('hidden');
 };
