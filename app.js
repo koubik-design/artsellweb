@@ -178,7 +178,7 @@ let searchQuery = '';
 let sortBy = 'newest';
 let hideSold = false;
 
-// Toast Notification Manager
+// Toast Notifications
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -193,7 +193,7 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
-// Dark/Light Theme Handler
+// Dark / Light Theme Engine
 function initTheme() {
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -209,23 +209,20 @@ function initTheme() {
   }
 }
 
-// Translation Engine
+// Language Engine
 function updateLanguageUI() {
   const texts = i18n[currentLang];
 
-  // Update elements with data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (texts[key]) el.textContent = texts[key];
   });
 
-  // Update input placeholders with data-i18n-placeholder
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     if (texts[key]) el.placeholder = texts[key];
   });
 
-  // Dynamic price output text
   const priceInput = document.getElementById('price');
   const priceOutput = document.getElementById('price-output');
   if (priceInput && priceOutput) {
@@ -233,11 +230,13 @@ function updateLanguageUI() {
   }
 
   renderProducts();
-  renderCommissions();
-  renderPayments();
+  if (isAdmin) {
+    renderCommissions();
+    renderPayments();
+  }
 }
 
-// Input and Event Listeners
+// Event Listeners
 document.getElementById('lang-select')?.addEventListener('change', (e) => {
   currentLang = e.target.value;
   updateLanguageUI();
@@ -265,9 +264,11 @@ if (priceInputEl) {
   };
 }
 
-// Firebase Auth State
+// Firebase Auth Listener
 onAuthStateChanged(auth, (user) => {
   isAdmin = !!user;
+
+  // Toggle admin section visibility based on authentication
   document.getElementById('admin-login-form')?.classList.toggle('hidden', isAdmin);
   document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
   document.getElementById('admin-commissions-section')?.classList.toggle('hidden', !isAdmin);
@@ -276,12 +277,19 @@ onAuthStateChanged(auth, (user) => {
 
   if (user) {
     document.getElementById('admin-user-email').textContent = user.email;
+    renderCommissions();
+    renderPayments();
+  } else {
+    currentCommissions = [];
+    currentPayments = [];
+    document.getElementById('stat-revenue').textContent = '0 CZK';
   }
+
   renderProducts();
   updateStats();
 });
 
-// Real-time Firestore Snapshot Listeners
+// Snapshot Listeners
 onSnapshot(collection(db, "products"), (snapshot) => {
   currentProducts = [];
   snapshot.forEach((docSnapshot) => {
@@ -292,6 +300,7 @@ onSnapshot(collection(db, "products"), (snapshot) => {
 });
 
 onSnapshot(collection(db, "commissions"), (snapshot) => {
+  if (!isAdmin) return;
   currentCommissions = [];
   snapshot.forEach((docSnap) => {
     currentCommissions.push({ id: docSnap.id, ...docSnap.data() });
@@ -302,6 +311,7 @@ onSnapshot(collection(db, "commissions"), (snapshot) => {
 
 const paymentsQuery = query(collection(db, "payments"), orderBy("timestamp", "desc"));
 onSnapshot(paymentsQuery, (snapshot) => {
+  if (!isAdmin) return;
   currentPayments = [];
   snapshot.forEach((docSnap) => {
     currentPayments.push({ id: docSnap.id, ...docSnap.data() });
@@ -310,9 +320,10 @@ onSnapshot(paymentsQuery, (snapshot) => {
   updateStats();
 });
 
-// Update Admin Stats
+// Admin Stats
 function updateStats() {
   if (!isAdmin) return;
+
   document.getElementById('stat-products').textContent = currentProducts.length;
   document.getElementById('stat-commissions').textContent = currentCommissions.length;
   
@@ -320,7 +331,7 @@ function updateStats() {
   document.getElementById('stat-revenue').textContent = `${totalRev} CZK`;
 }
 
-// Render Product Gallery Cards
+// Product Rendering
 function renderProducts() {
   const productList = document.getElementById('product-list');
   if (!productList) return;
@@ -334,7 +345,6 @@ function renderProducts() {
     return matchesSearch && matchesSold;
   });
 
-  // Sorting Logic
   filtered.sort((a, b) => {
     if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
     if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
@@ -349,8 +359,8 @@ function renderProducts() {
     let adminControlsHTML = '';
     if (isAdmin) {
       adminControlsHTML = `
-        <div class="admin-edit" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-            <input type="number" id="input-${item.id}" value="${numericPrice}" style="width: 90px;" />
+        <div class="admin-edit" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <input type="number" id="input-${item.id}" value="${numericPrice}" style="width: 80px;" />
             <button class="update-btn" data-id="${item.id}">${texts.updatePrice}</button>
             <button class="toggle-sold-btn danger-btn" data-id="${item.id}" data-sold="${item.isSold || false}">${texts.toggleSold}</button>
             <button class="delete-product-btn danger-btn" data-id="${item.id}">${texts.deleteItem}</button>
@@ -374,7 +384,6 @@ function renderProducts() {
     productList.appendChild(card);
   });
 
-  // Attach Stripe Redirect Handlers
   document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.preventDefault();
@@ -403,7 +412,6 @@ function renderProducts() {
     };
   });
 
-  // Admin Controls Handlers
   if (isAdmin) {
     document.querySelectorAll('.update-btn').forEach(btn => {
       btn.onclick = (e) => {
@@ -434,7 +442,7 @@ function renderProducts() {
   }
 }
 
-// Render Commissions View (Admin)
+// Render Commissions View
 function renderCommissions() {
   const commList = document.getElementById('commission-list');
   if (!commList || !isAdmin) return;
@@ -444,9 +452,9 @@ function renderCommissions() {
   currentCommissions.forEach((data) => {
     const status = data.status || 'pending';
     const card = document.createElement('div');
-    card.style.cssText = "padding: 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;";
+    card.style.cssText = "padding: 12px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;";
     card.innerHTML = `
-      <div style="display:flex; justify-content: space-between; align-items:center; gap: 12px; flex-wrap: wrap;">
+      <div style="display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap;">
         <h4>${data.name || 'Neznámý'} (${data.email || 'Bez e-mailu'})</h4>
         <select class="comm-status-select" data-id="${data.id}">
           <option value="pending" ${status === 'pending' ? 'selected' : ''}>${texts.statusPending}</option>
@@ -456,7 +464,7 @@ function renderCommissions() {
       </div>
       <p><strong>Rozpočet:</strong> ${data.estimatedPriceCZK || 0} ${texts.currencySymbol}</p>
       <p>${data.description || ''}</p>
-      <div style="margin-top: 4px;">
+      <div>
         <button class="delete-comm-btn danger-btn" data-id="${data.id}">${texts.deleteItem}</button>
       </div>
     `;
@@ -482,7 +490,7 @@ function renderCommissions() {
   });
 }
 
-// Render Payment Log History (Admin)
+// Render Payment History View
 function renderPayments() {
   const historyList = document.getElementById('payment-history-list');
   if (!historyList || !isAdmin) return;
@@ -500,7 +508,7 @@ function renderPayments() {
       : new Date().toLocaleString('cs-CZ');
 
     const row = document.createElement('div');
-    row.style.cssText = "padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px;";
+    row.style.cssText = "padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px;";
     row.innerHTML = `
       <div>
         <strong>${data.productTitle || 'Neznámý produkt'}</strong> - ${data.price || 0} ${texts.currencySymbol}<br>
@@ -522,7 +530,7 @@ function renderPayments() {
   });
 }
 
-// Add Product Event Listener
+// Add Product Event
 document.getElementById('add-product-btn')?.addEventListener('click', async () => {
   const texts = i18n[currentLang];
   const title = document.getElementById('new-title').value;
@@ -550,179 +558,7 @@ document.getElementById('add-product-btn')?.addEventListener('click', async () =
   if (document.getElementById('new-stripe-url')) document.getElementById('new-stripe-url').value = '';
 });
 
-// Commission Form Event Listener
-document.getElementById('commission-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const texts = i18n[currentLang];
-  const name = document.getElementById('name').value;
-  const email = document.getElementById('email').value;
-  const description = document.getElementById('description').value;
-  const estimatedPriceCZK = Number(document.getElementById('price').value);
-
-         await addDoc(collection(db, "payments"), {
-          productId: product.id,
-          productTitle: product.title || 'Untitled',
-          price: product.price || 0,
-          stripeURL: url.trim(),
-          timestamp: new Date(),
-          status: 'Zahájeno (Redirect)'
-        });
-      } catch (err) {
-        console.error("Chyba zápisu do historie:", err);
-      }
-
-      window.location.href = url.trim();
-    };
-  });
-
-  // Admin Controls Handlers
-  if (isAdmin) {
-    document.querySelectorAll('.update-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        const docId = btn.getAttribute('data-id');
-        const newPrice = Number(document.getElementById(`input-${docId}`).value);
-        updateDoc(doc(db, "products", docId), { price: newPrice });
-        showToast('Cena upravena');
-      };
-    });
-
-    document.querySelectorAll('.toggle-sold-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        const docId = btn.getAttribute('data-id');
-        const currentSold = btn.getAttribute('data-sold') === 'true';
-        updateDoc(doc(db, "products", docId), { isSold: !currentSold });
-      };
-    });
-
-    document.querySelectorAll('.delete-product-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        const docId = btn.getAttribute('data-id');
-        if (confirm(texts.confirmDelete)) {
-          deleteDoc(doc(db, "products", docId));
-          showToast('Produkt smazán', 'info');
-        }
-      };
-    });
-  }
-}
-
-// Render Commissions View (Admin)
-function renderCommissions() {
-  const commList = document.getElementById('commission-list');
-  if (!commList || !isAdmin) return;
-  commList.innerHTML = '';
-  const texts = i18n[currentLang];
-
-  currentCommissions.forEach((data) => {
-    const status = data.status || 'pending';
-    const card = document.createElement('div');
-    card.style.cssText = "padding: 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;";
-    card.innerHTML = `
-      <div style="display:flex; justify-content: space-between; align-items:center; gap: 12px; flex-wrap: wrap;">
-        <h4>${data.name || 'Neznámý'} (${data.email || 'Bez e-mailu'})</h4>
-        <select class="comm-status-select" data-id="${data.id}">
-          <option value="pending" ${status === 'pending' ? 'selected' : ''}>${texts.statusPending}</option>
-          <option value="in_progress" ${status === 'in_progress' ? 'selected' : ''}>${texts.statusInProgress}</option>
-          <option value="completed" ${status === 'completed' ? 'selected' : ''}>${texts.statusCompleted}</option>
-        </select>
-      </div>
-      <p><strong>Rozpočet:</strong> ${data.estimatedPriceCZK || 0} ${texts.currencySymbol}</p>
-      <p>${data.description || ''}</p>
-      <div style="margin-top: 4px;">
-        <button class="delete-comm-btn danger-btn" data-id="${data.id}">${texts.deleteItem}</button>
-      </div>
-    `;
-    commList.appendChild(card);
-  });
-
-  document.querySelectorAll('.comm-status-select').forEach(sel => {
-    sel.onchange = (e) => {
-      const docId = e.target.getAttribute('data-id');
-      updateDoc(doc(db, "commissions", docId), { status: e.target.value });
-      showToast('Stav poptávky aktualizován');
-    };
-  });
-
-  document.querySelectorAll('.delete-comm-btn').forEach(btn => {
-    btn.onclick = (e) => {
-      const docId = e.target.getAttribute('data-id');
-      if (confirm(i18n[currentLang].confirmDelete)) {
-        deleteDoc(doc(db, "commissions", docId));
-        showToast('Poptávka smazána', 'info');
-      }
-    };
-  });
-}
-
-// Render Payment Log History (Admin)
-function renderPayments() {
-  const historyList = document.getElementById('payment-history-list');
-  if (!historyList || !isAdmin) return;
-  historyList.innerHTML = '';
-  const texts = i18n[currentLang];
-
-  if (currentPayments.length === 0) {
-    historyList.innerHTML = `<p style="color: var(--text-muted);">Zatím žádná historie plateb.</p>`;
-    return;
-  }
-
-  currentPayments.forEach((data) => {
-    const formattedDate = data.timestamp?.toDate 
-      ? data.timestamp.toDate().toLocaleString('cs-CZ') 
-      : new Date().toLocaleString('cs-CZ');
-
-    const row = document.createElement('div');
-    row.style.cssText = "padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px;";
-    row.innerHTML = `
-      <div>
-        <strong>${data.productTitle || 'Neznámý produkt'}</strong> - ${data.price || 0} ${texts.currencySymbol}<br>
-        <small style="color: var(--text-muted);">Datum: ${formattedDate} | Status: ${data.status || 'Zahájeno'}</small>
-      </div>
-      <button class="delete-payment-btn danger-btn" data-id="${data.id}">${texts.deleteItem}</button>
-    `;
-    historyList.appendChild(row);
-  });
-
-  document.querySelectorAll('.delete-payment-btn').forEach(btn => {
-    btn.onclick = (e) => {
-      const docId = btn.getAttribute('data-id');
-      if (confirm(i18n[currentLang].confirmDelete)) {
-        deleteDoc(doc(db, "payments", docId));
-        showToast('Záznam smazán', 'info');
-      }
-    };
-  });
-}
-
-// Add Product Event Listener
-document.getElementById('add-product-btn')?.addEventListener('click', async () => {
-  const texts = i18n[currentLang];
-  const title = document.getElementById('new-title').value;
-  const description = document.getElementById('new-desc').value;
-  const price = Number(document.getElementById('new-price').value);
-  const stripeURL = document.getElementById('new-stripe-url')?.value || '';
-
-  if (!title || !price) {
-    showToast(texts.fillAllFields, 'error');
-    return;
-  }
-
-  await addDoc(collection(db, "products"), {
-    title, 
-    description, 
-    price, 
-    stripeURL: stripeURL.trim(), 
-    isSold: false
-  });
-
-  showToast(texts.productAdded, 'success');
-  document.getElementById('new-title').value = '';
-  document.getElementById('new-desc').value = '';
-  document.getElementById('new-price').value = '';
-  if (document.getElementById('new-stripe-url')) document.getElementById('new-stripe-url').value = '';
-});
-
-// Commission Form Event Listener
+// Commission Submission Event
 document.getElementById('commission-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const texts = i18n[currentLang];
@@ -740,11 +576,12 @@ document.getElementById('commission-form')?.addEventListener('submit', async (e)
   document.getElementById('price-output').textContent = `100 ${texts.currencySymbol}`;
 });
 
-// Admin Panel Toggle & Auth Events
+// Panel Toggle
 document.getElementById('admin-toggle-btn')?.addEventListener('click', () => {
   document.getElementById('admin-panel')?.classList.toggle('hidden');
 });
 
+// Auth Handlers
 document.getElementById('login-submit-btn')?.addEventListener('click', async () => {
   const email = document.getElementById('admin-email').value;
   const pass = document.getElementById('admin-password').value;
@@ -761,5 +598,4 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
   showToast('Odhlášeno', 'info');
 });
 
-// Initialize Theme
 initTheme();

@@ -32,7 +32,14 @@
   <section id="admin-panel" class="panel hidden">
     <h3 data-i18n="adminManagement">Admin Management</h3>
 
-    <!-- Admin Dashboard Statistics -->
+    <!-- Admin Login Form -->
+    <div id="admin-login-form">
+      <input type="email" id="admin-email" data-i18n-placeholder="adminEmailPlaceholder" placeholder="Admin Email" />
+      <input type="password" id="admin-password" data-i18n-placeholder="adminPasswordPlaceholder" placeholder="Heslo" />
+      <button id="login-submit-btn" data-i18n="adminLogin">Přihlásit se</button>
+    </div>
+
+    <!-- Admin Dashboard Statistics (Only visible when logged in) -->
     <div id="admin-stats" class="admin-stats-grid hidden">
       <div class="stat-card">
         <span id="stat-products">0</span>
@@ -46,13 +53,6 @@
         <span id="stat-revenue">0 CZK</span>
         <small data-i18n="statTotalRevenue">Příjmy z logů</small>
       </div>
-    </div>
-
-    <!-- Admin Login Form -->
-    <div id="admin-login-form">
-      <input type="email" id="admin-email" data-i18n-placeholder="adminEmailPlaceholder" placeholder="Admin Email" />
-      <input type="password" id="admin-password" data-i18n-placeholder="adminPasswordPlaceholder" placeholder="Heslo" />
-      <button id="login-submit-btn" data-i18n="adminLogin">Přihlásit se</button>
     </div>
 
     <!-- Admin Management Controls (Logged In) -->
@@ -86,7 +86,7 @@
     </div>
   </section>
 
-  <!-- Available Works Section with Search & Sorting Controls -->
+  <!-- Available Works Section -->
   <section class="panel">
     <div class="section-header">
       <h2 data-i18n="availableWorks">Dostupná díla</h2>
@@ -124,7 +124,6 @@
     </form>
   </section>
 
-  <!-- Application Script -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
