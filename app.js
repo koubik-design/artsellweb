@@ -20,7 +20,7 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-// Stripe Initialization with Live Key
+// Stripe Initialization
 const stripe = Stripe('pk_live_51O6zRIGuq8JDS1f7KpL6ozOEbZJVk0BtkNN2ZoJvWZWXg5ny7pf9oKs9YUzGQuphH5f8qdfVTqP2ViBCu9ZKNqCu00KH3PHvzZ');
 
 const firebaseConfig = {
@@ -150,7 +150,7 @@ onSnapshot(collection(db, "products"), (snapshot) => {
   renderProducts();
 });
 
-// Real-time Firestore Commissions Snapshot (Admin Only View)
+// Real-time Firestore Commissions Snapshot (Admin View)
 onSnapshot(collection(db, "commissions"), (snapshot) => {
   const commList = document.getElementById('commission-list');
   if (!commList) return;
@@ -210,26 +210,35 @@ function renderProducts() {
     productList.appendChild(card);
   });
 
-  // Attach Stripe Checkout Click Handlers
+  // Attach Stripe Checkout Click Handlers with Debug Alerts
   document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.onclick = async (e) => {
       const docId = e.target.getAttribute('data-id');
       const product = currentProducts.find(p => p.id === docId);
 
-      if (!product || !product.stripePriceId) {
-        alert('Stripe Price ID missing for this item.');
+      if (!product) {
+        alert('Product data missing.');
         return;
       }
 
-      const { error } = await stripe.redirectToCheckout({
-        lineItems: [{ price: product.stripePriceId, quantity: 1 }],
-        mode: 'payment',
-        successUrl: window.location.origin + '/success.html',
-        cancelUrl: window.location.origin + '/cancel.html',
-      });
+      if (!product.stripePriceId) {
+        alert(`Missing Stripe Price ID for "${product.title}". Check database field "stripePriceId".`);
+        return;
+      }
 
-      if (error) {
-        alert(error.message);
+      try {
+        const { error } = await stripe.redirectToCheckout({
+          lineItems: [{ price: String(product.stripePriceId).trim(), quantity: 1 }],
+          mode: 'payment',
+          successUrl: window.location.origin + '/success.html',
+          cancelUrl: window.location.origin + '/cancel.html',
+        });
+
+        if (error) {
+          alert('Stripe Error: ' + error.message);
+        }
+      } catch (err) {
+        alert('Checkout Exception: ' + err.message);
       }
     };
   });
@@ -253,7 +262,7 @@ function renderProducts() {
   });
 }
 
-// Add New Product with Firebase Storage Image Upload
+// Add New Product with Storage Upload
 const addProductBtn = document.getElementById('add-product-btn');
 if (addProductBtn) {
   addProductBtn.onclick = async () => {
@@ -277,7 +286,12 @@ if (addProductBtn) {
     }
 
     await addDoc(collection(db, "products"), {
-      title, description, price, stripePriceId, imageUrl, isSold: false
+      title, 
+      description, 
+      price, 
+      stripePriceId: stripePriceId.trim(), 
+      imageUrl, 
+      isSold: false
     });
 
     alert('Produkt úspěšně vytvořen!');
@@ -308,7 +322,7 @@ if (commissionForm) {
   };
 }
 
-// Admin Panel Toggle & Authentication Handlers
+// Admin Panel Toggle & Auth Handlers
 const adminToggleBtn = document.getElementById('admin-toggle-btn');
 if (adminToggleBtn) {
   adminToggleBtn.onclick = () => {
