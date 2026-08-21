@@ -5,7 +5,9 @@ import {
   onSnapshot, 
   doc, 
   updateDoc, 
-  addDoc 
+  addDoc,
+  query,
+  orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
   getAuth, 
@@ -55,7 +57,8 @@ const i18n = {
     updatePrice: "Upravit cenu",
     currencySymbol: "Kč",
     sold: "PRODÁNO",
-    toggleSold: "Změnit stav prodáno"
+    toggleSold: "Změnit stav prodáno",
+    paymentHistory: "Historie plateb"
   },
   en: {
     subtitle: "Original pieces & custom commissions",
@@ -77,7 +80,8 @@ const i18n = {
     updatePrice: "Update Price",
     currencySymbol: "CZK",
     sold: "SOLD OUT",
-    toggleSold: "Toggle Sold Status"
+    toggleSold: "Toggle Sold Status",
+    paymentHistory: "Payment History"
   },
   de: {
     subtitle: "Originale & Auftragsarbeiten",
@@ -99,7 +103,8 @@ const i18n = {
     updatePrice: "Preis Ändern",
     currencySymbol: "CZK",
     sold: "VERKAUFT",
-    toggleSold: "Status ändern"
+    toggleSold: "Status ändern",
+    paymentHistory: "Zahlungsverlauf"
   }
 };
 
@@ -130,6 +135,7 @@ onAuthStateChanged(auth, (user) => {
   document.getElementById('admin-login-form')?.classList.toggle('hidden', isAdmin);
   document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
   document.getElementById('admin-commissions-section')?.classList.toggle('hidden', !isAdmin);
+  document.getElementById('admin-payments-section')?.classList.toggle('hidden', !isAdmin);
   if (user) {
     const userEmailEl = document.getElementById('admin-user-email');
     if (userEmailEl) userEmailEl.textContent = user.email;
@@ -163,6 +169,35 @@ onSnapshot(collection(db, "commissions"), (snapshot) => {
       <p>${data.description || ''}</p>
     `;
     commList.appendChild(card);
+  });
+});
+
+// Real-time Firestore Payment History Snapshot (Admin View)
+const paymentsQuery = query(collection(db, "payments"), orderBy("timestamp", "desc"));
+onSnapshot(paymentsQuery, (snapshot) => {
+  const historyList = document.getElementById('payment-history-list');
+  if (!historyList) return;
+  historyList.innerHTML = '';
+
+  if (snapshot.empty) {
+    historyList.innerHTML = '<p>Zatím žádná historie plateb.</p>';
+    return;
+  }
+
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    const formattedDate = data.timestamp?.toDate 
+      ? data.timestamp.toDate().toLocaleString('cs-CZ') 
+      : new Date().toLocaleString('cs-CZ');
+
+    const row = document.createElement('div');
+    row.className = 'payment-history-row';
+    row.style.cssText = "padding: 10px; border-bottom: 1px solid #ccc; margin-bottom: 5px;";
+    row.innerHTML = `
+      <strong>${data.productTitle || 'Neznámý produkt'}</strong> - ${data.price || 0} Kč<br>
+      <small style="color: #666;">Datum: ${formattedDate} | Stav: ${data.status || 'Zahájeno'}</small>
+    `;
+    historyList.appendChild(row);
   });
 });
 
@@ -207,9 +242,9 @@ function renderProducts() {
     productList.appendChild(card);
   });
 
-  // Redirect to prizeURL / paymentLink on Buy click
+  // Attach Payment Redirect & History Logger
   document.querySelectorAll('.buy-btn').forEach(btn => {
-    btn.onclick = (e) => {
+    btn.onclick = async (e) => {
       e.preventDefault();
       const docId = btn.getAttribute('data-id');
       const product = currentProducts.find(p => p.id === docId);
@@ -219,15 +254,29 @@ function renderProducts() {
         return;
       }
 
-      // Check prizeURL field (or fallback name variations)
-      const url = product.prizeURL || product.priceUrl || product.paymentLink;
+      // Read stripeURL (with fallback check for legacy field names)
+      const url = product.stripeURL || product.stripeUrl || product.prizeURL || product.paymentLink;
 
       if (!url) {
-        alert(`Chybí URL adresa platby pro "${product.title}". Zkontrolujte pole prizeURL v databázi.`);
+        alert(`Chybí Stripe URL pro "${product.title}". Zkontrolujte pole stripeURL v databázi.`);
         return;
       }
 
-      // Open the payment link directly
+      // Record transaction history record into Firebase before redirecting
+      try {
+        await addDoc(collection(db, "payments"), {
+          productId: product.id,
+          productTitle: product.title || 'Untitled',
+          price: product.price || 0,
+          stripeURL: url.trim(),
+          timestamp: new Date(),
+          status: 'Zahájeno (Redirect)'
+        });
+      } catch (err) {
+        console.error("Chyba při zápisu do historie plateb:", err);
+      }
+
+      // Redirect directly to Stripe Payment Link
       window.location.href = url.trim();
     };
   });
@@ -251,14 +300,14 @@ function renderProducts() {
   });
 }
 
-// Add New Product with prizeURL field
+// Add New Product with stripeURL
 const addProductBtn = document.getElementById('add-product-btn');
 if (addProductBtn) {
   addProductBtn.onclick = async () => {
     const title = document.getElementById('new-title').value;
     const description = document.getElementById('new-desc').value;
     const price = Number(document.getElementById('new-price').value);
-    const prizeURL = document.getElementById('new-prize-url')?.value || '';
+    const stripeURL = document.getElementById('new-stripe-url')?.value || '';
     const fileInput = document.getElementById('new-image');
     const file = fileInput.files[0];
 
@@ -274,12 +323,12 @@ if (addProductBtn) {
       imageUrl = await getDownloadURL(fileRef);
     }
 
-    // Save product document to Firebase Firestore with prizeURL
+    // Save product to Firebase Firestore using stripeURL
     await addDoc(collection(db, "products"), {
       title, 
       description, 
       price, 
-      prizeURL: prizeURL.trim(), 
+      stripeURL: stripeURL.trim(), 
       imageUrl, 
       isSold: false
     });
@@ -288,7 +337,7 @@ if (addProductBtn) {
     document.getElementById('new-title').value = '';
     document.getElementById('new-desc').value = '';
     document.getElementById('new-price').value = '';
-    if (document.getElementById('new-prize-url')) document.getElementById('new-prize-url').value = '';
+    if (document.getElementById('new-stripe-url')) document.getElementById('new-stripe-url').value = '';
     fileInput.value = '';
   };
 }
