@@ -10,7 +10,6 @@
 <body>
 
 <div class="app-container">
-    <!-- Top Bar: Language & Admin Toggle -->
     <div class="top-bar">
         <select id="lang-select">
             <option value="cz">🇨🇿 CZ</option>
@@ -20,7 +19,7 @@
         <button id="admin-toggle-btn" class="secondary-btn" data-i18n="adminLogin">Admin Login</button>
     </div>
 
-    <!-- Admin Login Modal / Panel -->
+    <!-- Admin Panel -->
     <div id="admin-panel" class="admin-panel hidden">
         <h3 data-i18n="adminTitle">Admin Access</h3>
         <div id="admin-login-form">
@@ -31,13 +30,15 @@
         <div id="admin-controls" class="hidden">
             <p><span data-i18n="loggedInAs">Přihlášen jako:</span> <strong id="admin-user-email"></strong></p>
             
-            <!-- Quick Add Product Form for Admin -->
+            <!-- Add Product Form with File Upload -->
             <div class="add-product-box">
                 <h4 data-i18n="addNewProduct">Přidat nový produkt</h4>
                 <input type="text" id="new-title" placeholder="Název / Title">
                 <input type="text" id="new-desc" placeholder="Popis / Description">
                 <input type="number" id="new-price" placeholder="Cena v CZK / Price in CZK">
                 <input type="text" id="new-stripe-id" placeholder="Stripe Price ID (price_...)">
+                <label style="font-size: 0.8rem;">Fotografie / Image:</label>
+                <input type="file" id="new-image" accept="image/*">
                 <button id="add-product-btn" data-i18n="saveProduct">Uložit produkt</button>
             </div>
 
@@ -53,12 +54,16 @@
     <!-- Product Showcase -->
     <section>
         <h2 data-i18n="availableWorks">Dostupná díla</h2>
-        <div class="product-grid" id="product-list">
-            <!-- Dynamically populated from Firestore -->
-        </div>
+        <div class="product-grid" id="product-list"></div>
     </section>
 
-    <!-- Custom Commission Request -->
+    <!-- Admin Commissions View -->
+    <section id="admin-commissions-section" class="hidden">
+        <h2>Poptávky / Commissions</h2>
+        <div class="commission-grid" id="commission-list"></div>
+    </section>
+
+    <!-- Custom Commission Form -->
     <section>
         <h2 data-i18n="commissionTitle">Zakázková tvorba</h2>
         <form id="commission-form">
@@ -74,8 +79,6 @@
                 <label for="description" data-i18n="conceptDesc">Popis konceptu</label>
                 <textarea id="description" rows="3" required placeholder="Popište svou představu..."></textarea>
             </div>
-            
-            <!-- CZK Price Slider: 20 CZK to 250 CZK with 5 CZK steps -->
             <div class="form-group slider-container">
                 <label data-i18n="budgetEstimate">Odhad rozpočtu</label>
                 <input type="range" id="price" min="20" max="250" value="100" step="5">
@@ -86,7 +89,12 @@
     </section>
 </div>
 
-<script type="module" src="app.js"></script>
+<!-- Full-Screen Lightbox Modal -->
+<div id="lightbox" class="lightbox hidden">
+    <span id="lightbox-close">&times;</span>
+    <img id="lightbox-img" src="" alt="Enlarged Art">
+</div>
 
+<script type="module" src="app.js"></script>
 </body>
 </html>
