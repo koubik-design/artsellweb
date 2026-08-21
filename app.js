@@ -264,11 +264,10 @@ if (priceInputEl) {
   };
 }
 
-// Firebase Auth Listener
+// Auth State Toggle Visibility Fix
 onAuthStateChanged(auth, (user) => {
   isAdmin = !!user;
 
-  // Toggle admin section visibility based on authentication
   document.getElementById('admin-login-form')?.classList.toggle('hidden', isAdmin);
   document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
   document.getElementById('admin-commissions-section')?.classList.toggle('hidden', !isAdmin);
@@ -282,14 +281,13 @@ onAuthStateChanged(auth, (user) => {
   } else {
     currentCommissions = [];
     currentPayments = [];
-    document.getElementById('stat-revenue').textContent = '0 CZK';
   }
 
   renderProducts();
   updateStats();
 });
 
-// Snapshot Listeners
+// Real-time Firestore Listeners
 onSnapshot(collection(db, "products"), (snapshot) => {
   currentProducts = [];
   snapshot.forEach((docSnapshot) => {
@@ -320,7 +318,7 @@ onSnapshot(paymentsQuery, (snapshot) => {
   updateStats();
 });
 
-// Admin Stats
+// Update Statistics
 function updateStats() {
   if (!isAdmin) return;
 
@@ -331,7 +329,7 @@ function updateStats() {
   document.getElementById('stat-revenue').textContent = `${totalRev} CZK`;
 }
 
-// Product Rendering
+// Render Products
 function renderProducts() {
   const productList = document.getElementById('product-list');
   if (!productList) return;
@@ -442,7 +440,7 @@ function renderProducts() {
   }
 }
 
-// Render Commissions View
+// Render Commissions
 function renderCommissions() {
   const commList = document.getElementById('commission-list');
   if (!commList || !isAdmin) return;
@@ -452,7 +450,7 @@ function renderCommissions() {
   currentCommissions.forEach((data) => {
     const status = data.status || 'pending';
     const card = document.createElement('div');
-    card.style.cssText = "padding: 12px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;";
+    card.style.cssText = "padding: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;";
     card.innerHTML = `
       <div style="display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap;">
         <h4>${data.name || 'Neznámý'} (${data.email || 'Bez e-mailu'})</h4>
@@ -490,7 +488,7 @@ function renderCommissions() {
   });
 }
 
-// Render Payment History View
+// Render Payment History
 function renderPayments() {
   const historyList = document.getElementById('payment-history-list');
   if (!historyList || !isAdmin) return;
@@ -508,7 +506,7 @@ function renderPayments() {
       : new Date().toLocaleString('cs-CZ');
 
     const row = document.createElement('div');
-    row.style.cssText = "padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px;";
+    row.style.cssText = "padding: 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 10px;";
     row.innerHTML = `
       <div>
         <strong>${data.productTitle || 'Neznámý produkt'}</strong> - ${data.price || 0} ${texts.currencySymbol}<br>
@@ -558,7 +556,7 @@ document.getElementById('add-product-btn')?.addEventListener('click', async () =
   if (document.getElementById('new-stripe-url')) document.getElementById('new-stripe-url').value = '';
 });
 
-// Commission Submission Event
+// Commission Form Submission
 document.getElementById('commission-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const texts = i18n[currentLang];
@@ -581,7 +579,7 @@ document.getElementById('admin-toggle-btn')?.addEventListener('click', () => {
   document.getElementById('admin-panel')?.classList.toggle('hidden');
 });
 
-// Auth Handlers
+// Auth Click Handlers
 document.getElementById('login-submit-btn')?.addEventListener('click', async () => {
   const email = document.getElementById('admin-email').value;
   const pass = document.getElementById('admin-password').value;

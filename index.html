@@ -32,14 +32,14 @@
   <section id="admin-panel" class="panel hidden">
     <h3 data-i18n="adminManagement">Admin Management</h3>
 
-    <!-- Admin Login Form -->
+    <!-- Admin Login Form (Visible when logged out) -->
     <div id="admin-login-form">
       <input type="email" id="admin-email" data-i18n-placeholder="adminEmailPlaceholder" placeholder="Admin Email" />
       <input type="password" id="admin-password" data-i18n-placeholder="adminPasswordPlaceholder" placeholder="Heslo" />
       <button id="login-submit-btn" data-i18n="adminLogin">Přihlásit se</button>
     </div>
 
-    <!-- Admin Dashboard Statistics (Only visible when logged in) -->
+    <!-- Admin Dashboard Statistics (Hidden until logged in) -->
     <div id="admin-stats" class="admin-stats-grid hidden">
       <div class="stat-card">
         <span id="stat-products">0</span>
@@ -55,12 +55,12 @@
       </div>
     </div>
 
-    <!-- Admin Management Controls (Logged In) -->
+    <!-- Admin Controls (Hidden until logged in) -->
     <div id="admin-controls" class="hidden">
-      <p>
+      <p style="margin-bottom: 16px;">
         <span data-i18n="loggedInAs">Přihlášen jako:</span> 
         <strong id="admin-user-email"></strong> 
-        <button id="logout-btn" class="danger-btn" data-i18n="logout">Odhlásit se</button>
+        <button id="logout-btn" class="danger-btn" style="margin-left: 10px;" data-i18n="logout">Odhlásit se</button>
       </p>
       
       <h4 data-i18n="addNewProduct">Přidat nový produkt</h4>
@@ -74,13 +74,13 @@
     </div>
 
     <!-- Admin Commission Requests View -->
-    <div id="admin-commissions-section" class="hidden">
+    <div id="admin-commissions-section" class="hidden" style="margin-top: 20px;">
       <h4 data-i18n="commissionRequests">Poptávky zakázkové tvorby</h4>
       <div id="commission-list"></div>
     </div>
 
     <!-- Admin Payment Logs History View -->
-    <div id="admin-payments-section" class="hidden">
+    <div id="admin-payments-section" class="hidden" style="margin-top: 20px;">
       <h4 data-i18n="paymentHistory">Historie plateb</h4>
       <div id="payment-history-list"></div>
     </div>
@@ -106,7 +106,7 @@
     <div id="product-list" class="grid"></div>
   </section>
 
-  <!-- Custom Commission Request Form -->
+  <!-- Custom Commission Form -->
   <section class="panel">
     <h2 data-i18n="commissionTitle">Zakázková tvorba</h2>
     <form id="commission-form">
