@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,83 +8,123 @@
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Main Header -->
   <header>
     <div>
       <h1>ArtByFish</h1>
-      <p id="subtitle-text">Originální díla a zakázková tvorba</p>
+      <p id="subtitle-text" data-i18n="subtitle">Originální díla a zakázková tvorba</p>
     </div>
     <div class="top-controls">
-      <select id="lang-select">
+      <select id="lang-select" aria-label="Select Language">
         <option value="cz">CZ</option>
         <option value="en">EN</option>
         <option value="de">DE</option>
       </select>
-      <button id="admin-toggle-btn">Admin Access</button>
+      <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Theme">🌙 / ☀️</button>
+      <button id="admin-toggle-btn" data-i18n="adminTitle">Admin Access</button>
     </div>
   </header>
 
   <!-- Admin Area -->
   <section id="admin-panel" class="panel hidden">
-    <h3>Admin Management</h3>
+    <h3 data-i18n="adminManagement">Admin Management</h3>
 
-    <!-- Admin Login -->
-    <div id="admin-login-form">
-      <input type="email" id="admin-email" placeholder="Admin Email" />
-      <input type="password" id="admin-password" placeholder="Password" />
-      <button id="login-submit-btn">Přihlásit se</button>
-    </div>
-
-    <!-- Admin Controls (Logged In) -->
-    <div id="admin-controls" class="hidden">
-      <p>Přihlášen jako: <span id="admin-user-email"></span> <button id="logout-btn" class="danger-btn">Odhlásit se</button></p>
-      
-      <h4>Přidat nový produkt</h4>
-      <div class="admin-add-form">
-        <input type="text" id="new-title" placeholder="Název produktu" />
-        <textarea id="new-desc" placeholder="Popis produktu"></textarea>
-        <input type="number" id="new-price" placeholder="Cena (CZK)" />
-        <input type="url" id="new-stripe-url" placeholder="Stripe Payment Link (https://buy.stripe.com/...)" />
-        <button id="add-product-btn">Uložit produkt</button>
+    <!-- Admin Dashboard Statistics -->
+    <div id="admin-stats" class="admin-stats-grid hidden">
+      <div class="stat-card">
+        <span id="stat-products">0</span>
+        <small data-i18n="statTotalProducts">Produktů</small>
+      </div>
+      <div class="stat-card">
+        <span id="stat-commissions">0</span>
+        <small data-i18n="statPendingCommissions">Poptávek</small>
+      </div>
+      <div class="stat-card">
+        <span id="stat-revenue">0 CZK</span>
+        <small data-i18n="statTotalRevenue">Příjmy z logů</small>
       </div>
     </div>
 
-    <!-- Admin Commissions View -->
+    <!-- Admin Login Form -->
+    <div id="admin-login-form">
+      <input type="email" id="admin-email" data-i18n-placeholder="adminEmailPlaceholder" placeholder="Admin Email" />
+      <input type="password" id="admin-password" data-i18n-placeholder="adminPasswordPlaceholder" placeholder="Heslo" />
+      <button id="login-submit-btn" data-i18n="adminLogin">Přihlásit se</button>
+    </div>
+
+    <!-- Admin Management Controls (Logged In) -->
+    <div id="admin-controls" class="hidden">
+      <p>
+        <span data-i18n="loggedInAs">Přihlášen jako:</span> 
+        <strong id="admin-user-email"></strong> 
+        <button id="logout-btn" class="danger-btn" data-i18n="logout">Odhlásit se</button>
+      </p>
+      
+      <h4 data-i18n="addNewProduct">Přidat nový produkt</h4>
+      <div class="admin-add-form">
+        <input type="text" id="new-title" data-i18n-placeholder="newTitlePlaceholder" placeholder="Název produktu" />
+        <textarea id="new-desc" data-i18n-placeholder="newDescPlaceholder" placeholder="Popis produktu" rows="3"></textarea>
+        <input type="number" id="new-price" data-i18n-placeholder="newPricePlaceholder" placeholder="Cena (CZK)" />
+        <input type="url" id="new-stripe-url" placeholder="Stripe Payment Link (https://buy.stripe.com/...)" />
+        <button id="add-product-btn" data-i18n="saveProduct">Uložit produkt</button>
+      </div>
+    </div>
+
+    <!-- Admin Commission Requests View -->
     <div id="admin-commissions-section" class="hidden">
-      <h4>Poptávky zakázkové tvorby</h4>
+      <h4 data-i18n="commissionRequests">Poptávky zakázkové tvorby</h4>
       <div id="commission-list"></div>
     </div>
 
-    <!-- Admin Payment History View -->
+    <!-- Admin Payment Logs History View -->
     <div id="admin-payments-section" class="hidden">
-      <h4>Historie plateb</h4>
+      <h4 data-i18n="paymentHistory">Historie plateb</h4>
       <div id="payment-history-list"></div>
     </div>
   </section>
 
-  <!-- Product List Gallery -->
+  <!-- Available Works Section with Search & Sorting Controls -->
   <section class="panel">
-    <h2>Dostupná díla</h2>
+    <div class="section-header">
+      <h2 data-i18n="availableWorks">Dostupná díla</h2>
+      <div class="filter-controls">
+        <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Hledat..." />
+        <select id="sort-select">
+          <option value="newest" data-i18n="sortNewest">Nejnovější</option>
+          <option value="price-asc" data-i18n="sortPriceAsc">Cena: Od nejlevnějšího</option>
+          <option value="price-desc" data-i18n="sortPriceDesc">Cena: Od nejdražšího</option>
+        </select>
+        <label class="checkbox-label">
+          <input type="checkbox" id="hide-sold-checkbox" />
+          <span data-i18n="filterHideSold">Skrýt prodané</span>
+        </label>
+      </div>
+    </div>
     <div id="product-list" class="grid"></div>
   </section>
 
-  <!-- Commission Form -->
+  <!-- Custom Commission Request Form -->
   <section class="panel">
-    <h2>Zakázková tvorba</h2>
+    <h2 data-i18n="commissionTitle">Zakázková tvorba</h2>
     <form id="commission-form">
-      <input type="text" id="name" placeholder="Vaše Jméno" required />
-      <input type="email" id="email" placeholder="Váš E-mail" required />
-      <textarea id="description" placeholder="Popis konceptu" rows="4" required></textarea>
+      <input type="text" id="name" data-i18n-placeholder="namePlaceholder" placeholder="Vaše Jméno" required />
+      <input type="email" id="email" data-i18n-placeholder="emailPlaceholder" placeholder="Váš E-mail" required />
+      <textarea id="description" data-i18n-placeholder="conceptDescPlaceholder" placeholder="Popis konceptu" rows="4" required></textarea>
       
-      <label for="price">Odhad rozpočtu:</label>
+      <label for="price">
+        <span data-i18n="budgetEstimate">Odhad rozpočtu:</span> 
+        <strong id="price-output">100 Kč</strong>
+      </label>
       <input type="range" id="price" min="20" max="250" step="5" value="100" />
-      <span id="price-output">100 Kč</span>
 
-      <button type="submit">Odeslat poptávku</button>
+      <button type="submit" data-i18n="submitRequest">Odeslat poptávku</button>
     </form>
   </section>
 
-  <!-- App Script -->
+  <!-- Application Script -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
