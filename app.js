@@ -20,9 +20,6 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-// Stripe Initialization
-const stripe = Stripe('pk_live_51O6zRIGuq8JDS1f7KpL6ozOEbZJVk0BtkNN2ZoJvWZWXg5ny7pf9oKs9YUzGQuphH5f8qdfVTqP2ViBCu9ZKNqCu00KH3PHvzZ');
-
 const firebaseConfig = {
   apiKey: "AIzaSyDy6Roy65lq7jQBmZAEjsOaAtjoi91mc5o",
   authDomain: "artbyfish.firebaseapp.com",
@@ -169,7 +166,7 @@ onSnapshot(collection(db, "commissions"), (snapshot) => {
   });
 });
 
-// Render Product Gallery and Admin Controls
+// Render Product Gallery
 function renderProducts() {
   const productList = document.getElementById('product-list');
   if (!productList) return;
@@ -210,43 +207,35 @@ function renderProducts() {
     productList.appendChild(card);
   });
 
-  // Attach Stripe Checkout Click Handlers with Debug Alerts
+  // Redirect to prizeURL / paymentLink on Buy click
   document.querySelectorAll('.buy-btn').forEach(btn => {
-    btn.onclick = async (e) => {
-      const docId = e.target.getAttribute('data-id');
+    btn.onclick = (e) => {
+      e.preventDefault();
+      const docId = btn.getAttribute('data-id');
       const product = currentProducts.find(p => p.id === docId);
 
       if (!product) {
-        alert('Product data missing.');
+        alert('Produkt nebyl nalezen.');
         return;
       }
 
-      if (!product.stripePriceId) {
-        alert(`Missing Stripe Price ID for "${product.title}". Check database field "stripePriceId".`);
+      // Check prizeURL field (or fallback name variations)
+      const url = product.prizeURL || product.priceUrl || product.paymentLink;
+
+      if (!url) {
+        alert(`Chybí URL adresa platby pro "${product.title}". Zkontrolujte pole prizeURL v databázi.`);
         return;
       }
 
-      try {
-        const { error } = await stripe.redirectToCheckout({
-          lineItems: [{ price: String(product.stripePriceId).trim(), quantity: 1 }],
-          mode: 'payment',
-          successUrl: window.location.origin + '/success.html',
-          cancelUrl: window.location.origin + '/cancel.html',
-        });
-
-        if (error) {
-          alert('Stripe Error: ' + error.message);
-        }
-      } catch (err) {
-        alert('Checkout Exception: ' + err.message);
-      }
+      // Open the payment link directly
+      window.location.href = url.trim();
     };
   });
 
   // Admin Update Price Handler
   document.querySelectorAll('.update-btn').forEach(btn => {
     btn.onclick = (e) => {
-      const docId = e.target.getAttribute('data-id');
+      const docId = btn.getAttribute('data-id');
       const newPrice = Number(document.getElementById(`input-${docId}`).value);
       updateDoc(doc(db, "products", docId), { price: newPrice });
     };
@@ -255,21 +244,21 @@ function renderProducts() {
   // Admin Toggle Sold Handler
   document.querySelectorAll('.toggle-sold-btn').forEach(btn => {
     btn.onclick = (e) => {
-      const docId = e.target.getAttribute('data-id');
-      const currentSold = e.target.getAttribute('data-sold') === 'true';
+      const docId = btn.getAttribute('data-id');
+      const currentSold = btn.getAttribute('data-sold') === 'true';
       updateDoc(doc(db, "products", docId), { isSold: !currentSold });
     };
   });
 }
 
-// Add New Product with Storage Upload
+// Add New Product with prizeURL field
 const addProductBtn = document.getElementById('add-product-btn');
 if (addProductBtn) {
   addProductBtn.onclick = async () => {
     const title = document.getElementById('new-title').value;
     const description = document.getElementById('new-desc').value;
     const price = Number(document.getElementById('new-price').value);
-    const stripePriceId = document.getElementById('new-stripe-id').value;
+    const prizeURL = document.getElementById('new-prize-url')?.value || '';
     const fileInput = document.getElementById('new-image');
     const file = fileInput.files[0];
 
@@ -285,11 +274,12 @@ if (addProductBtn) {
       imageUrl = await getDownloadURL(fileRef);
     }
 
+    // Save product document to Firebase Firestore with prizeURL
     await addDoc(collection(db, "products"), {
       title, 
       description, 
       price, 
-      stripePriceId: stripePriceId.trim(), 
+      prizeURL: prizeURL.trim(), 
       imageUrl, 
       isSold: false
     });
@@ -298,12 +288,12 @@ if (addProductBtn) {
     document.getElementById('new-title').value = '';
     document.getElementById('new-desc').value = '';
     document.getElementById('new-price').value = '';
-    document.getElementById('new-stripe-id').value = '';
+    if (document.getElementById('new-prize-url')) document.getElementById('new-prize-url').value = '';
     fileInput.value = '';
   };
 }
 
-// Submit Custom Commission Request
+// Custom Commission Form Submission
 const commissionForm = document.getElementById('commission-form');
 if (commissionForm) {
   commissionForm.onsubmit = async (e) => {
