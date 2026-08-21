@@ -1,24 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artisan Commissions & Gallery</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Stripe JS SDK -->
     <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 
 <div class="app-container">
+    <!-- Top Bar: Language & Admin Toggle -->
+    <div class="top-bar">
+        <select id="lang-select">
+            <option value="cz">🇨🇿 CZ</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="de">🇩🇪 DE</option>
+        </select>
+        <button id="admin-toggle-btn" class="secondary-btn" data-i18n="adminLogin">Admin Login</button>
+    </div>
+
+    <!-- Admin Login Modal / Panel -->
+    <div id="admin-panel" class="admin-panel hidden">
+        <h3 data-i18n="adminTitle">Admin Access</h3>
+        <div id="admin-login-form">
+            <input type="email" id="admin-email" placeholder="Email">
+            <input type="password" id="admin-password" placeholder="Heslo / Password">
+            <button id="login-submit-btn" data-i18n="login">Přihlásit se</button>
+        </div>
+        <div id="admin-controls" class="hidden">
+            <p><span data-i18n="loggedInAs">Přihlášen jako:</span> <strong id="admin-user-email"></strong></p>
+            
+            <!-- Quick Add Product Form for Admin -->
+            <div class="add-product-box">
+                <h4 data-i18n="addNewProduct">Přidat nový produkt</h4>
+                <input type="text" id="new-title" placeholder="Název / Title">
+                <input type="text" id="new-desc" placeholder="Popis / Description">
+                <input type="number" id="new-price" placeholder="Cena v CZK / Price in CZK">
+                <input type="text" id="new-stripe-id" placeholder="Stripe Price ID (price_...)">
+                <button id="add-product-btn" data-i18n="saveProduct">Uložit produkt</button>
+            </div>
+
+            <button id="logout-btn" class="danger-btn" data-i18n="logout">Odhlásit se</button>
+        </div>
+    </div>
+
     <header>
         <h1>Custom Artworks</h1>
-        <p class="subtitle">Original pieces & custom commissions</p>
+        <p class="subtitle" data-i18n="subtitle">Originální díla a zakázková tvorba</p>
     </header>
 
     <!-- Product Showcase -->
     <section>
-        <h2>Available Works</h2>
+        <h2 data-i18n="availableWorks">Dostupná díla</h2>
         <div class="product-grid" id="product-list">
             <!-- Dynamically populated from Firestore -->
         </div>
@@ -26,31 +60,32 @@
 
     <!-- Custom Commission Request -->
     <section>
-        <h2>Commission Request</h2>
+        <h2 data-i18n="commissionTitle">Zakázková tvorba</h2>
         <form id="commission-form">
             <div class="form-group">
-                <label for="name">Name</label>
-                <input type="text" id="name" required placeholder="Jane Doe">
+                <label for="name" data-i18n="name">Jméno</label>
+                <input type="text" id="name" required placeholder="Jan Novák">
             </div>
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required placeholder="jane@example.com">
+                <label for="email" data-i18n="email">E-mail</label>
+                <input type="email" id="email" required placeholder="jan@example.cz">
             </div>
             <div class="form-group">
-                <label for="description">Concept Description</label>
-                <textarea id="description" rows="3" required placeholder="Describe your vision..."></textarea>
+                <label for="description" data-i18n="conceptDesc">Popis konceptu</label>
+                <textarea id="description" rows="3" required placeholder="Popište svou představu..."></textarea>
             </div>
+            
+            <!-- CZK Price Slider: 20 CZK to 250 CZK with 5 CZK steps -->
             <div class="form-group slider-container">
-                <label>Budget Estimate</label>
-                <input type="range" id="price" min="50" max="500" value="250" step="10">
-                <span class="price-badge" id="price-output">$250</span>
+                <label data-i18n="budgetEstimate">Odhad rozpočtu</label>
+                <input type="range" id="price" min="20" max="250" value="100" step="5">
+                <span class="price-badge" id="price-output">100 Kč</span>
             </div>
-            <button type="submit">Submit Request</button>
+            <button type="submit" data-i18n="submitRequest">Odeslat poptávku</button>
         </form>
     </section>
 </div>
 
-<!-- Main Application Script -->
 <script type="module" src="app.js"></script>
 
 </body>
