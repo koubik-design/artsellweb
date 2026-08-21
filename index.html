@@ -35,7 +35,7 @@
       <button id="login-submit-btn">Přihlásit se</button>
     </div>
 
-    <!-- Admin Controls (When Logged In) -->
+    <!-- Admin Controls (Logged In) -->
     <div id="admin-controls" class="hidden">
       <p>Přihlášen jako: <span id="admin-user-email"></span> <button id="logout-btn" class="danger-btn">Odhlásit se</button></p>
       
@@ -62,13 +62,13 @@
     </div>
   </section>
 
-  <!-- Product List -->
+  <!-- Product List Gallery -->
   <section class="panel">
     <h2>Dostupná díla</h2>
     <div id="product-list" class="grid"></div>
   </section>
 
-  <!-- Commission Request Form -->
+  <!-- Commission Form -->
   <section class="panel">
     <h2>Zakázková tvorba</h2>
     <form id="commission-form">
@@ -77,14 +77,14 @@
       <textarea id="description" placeholder="Popis konceptu" rows="4" required></textarea>
       
       <label for="price">Odhad rozpočtu:</label>
-      <input type="range" id="price" min="500" max="15000" step="500" value="3000" />
-      <span id="price-output">3000 Kč</span>
+      <input type="range" id="price" min="20" max="250" step="5" value="100" />
+      <span id="price-output">100 Kč</span>
 
       <button type="submit">Odeslat poptávku</button>
     </form>
   </section>
 
-  <!-- Contacts Section -->
+  <!-- Discord Contact Section -->
   <section class="contact-section">
     <h2>Discord Kontakt</h2>
     <p>Máte dotaz nebo zájem o zakázku na míru? Napište nám na Discordu:</p>
@@ -105,4 +105,3 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
