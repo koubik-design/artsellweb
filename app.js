@@ -20,6 +20,9 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
+// Stripe Initialization with Live Key
+const stripe = Stripe('pk_live_51O6zRIGuq8JDS1f7KpL6ozOEbZJVk0BtkNN2ZoJvWZWXg5ny7pf9oKs9YUzGQuphH5f8qdfVTqP2ViBCu9ZKNqCu00KH3PHvzZ');
+
 const firebaseConfig = {
   apiKey: "AIzaSyDy6Roy65lq7jQBmZAEjsOaAtjoi91mc5o",
   authDomain: "artbyfish.firebaseapp.com",
@@ -106,23 +109,38 @@ const i18n = {
 let currentLang = 'cz';
 let isAdmin = false;
 
-// Language Selector
-document.getElementById('lang-select').onchange = (e) => {
-  currentLang = e.target.value;
-  renderProducts();
-};
+// Language Switcher
+const langSelect = document.getElementById('lang-select');
+if (langSelect) {
+  langSelect.onchange = (e) => {
+    currentLang = e.target.value;
+    renderProducts();
+  };
+}
 
-// Auth Observer
+// Commission Slider Value Binding
+const priceInput = document.getElementById('price');
+const priceOutput = document.getElementById('price-output');
+if (priceInput && priceOutput) {
+  priceInput.oninput = (e) => {
+    priceOutput.textContent = `${e.target.value} Kč`;
+  };
+}
+
+// Authentication State Listener
 onAuthStateChanged(auth, (user) => {
   isAdmin = !!user;
-  document.getElementById('admin-login-form').classList.toggle('hidden', isAdmin);
-  document.getElementById('admin-controls').classList.toggle('hidden', !isAdmin);
-  document.getElementById('admin-commissions-section').classList.toggle('hidden', !isAdmin);
-  if (user) document.getElementById('admin-user-email').textContent = user.email;
+  document.getElementById('admin-login-form')?.classList.toggle('hidden', isAdmin);
+  document.getElementById('admin-controls')?.classList.toggle('hidden', !isAdmin);
+  document.getElementById('admin-commissions-section')?.classList.toggle('hidden', !isAdmin);
+  if (user) {
+    const userEmailEl = document.getElementById('admin-user-email');
+    if (userEmailEl) userEmailEl.textContent = user.email;
+  }
   renderProducts();
 });
 
-// Real-time Products Listener
+// Real-time Firestore Products Snapshot
 let currentProducts = [];
 onSnapshot(collection(db, "products"), (snapshot) => {
   currentProducts = [];
@@ -132,7 +150,7 @@ onSnapshot(collection(db, "products"), (snapshot) => {
   renderProducts();
 });
 
-// Real-time Commissions Listener (For Admin)
+// Real-time Firestore Commissions Snapshot (Admin Only View)
 onSnapshot(collection(db, "commissions"), (snapshot) => {
   const commList = document.getElementById('commission-list');
   if (!commList) return;
@@ -143,14 +161,15 @@ onSnapshot(collection(db, "commissions"), (snapshot) => {
     const card = document.createElement('div');
     card.className = 'commission-card';
     card.innerHTML = `
-      <h4>${data.name} (${data.email})</h4>
-      <p><strong>Rozpočet:</strong> ${data.estimatedPriceCZK} Kč</p>
-      <p>${data.description}</p>
+      <h4>${data.name || 'Neznámý'} (${data.email || 'Bez e-mailu'})</h4>
+      <p><strong>Rozpočet:</strong> ${data.estimatedPriceCZK || 0} Kč</p>
+      <p>${data.description || ''}</p>
     `;
     commList.appendChild(card);
   });
 });
 
+// Render Product Gallery and Admin Controls
 function renderProducts() {
   const productList = document.getElementById('product-list');
   if (!productList) return;
@@ -184,14 +203,38 @@ function renderProducts() {
       <div class="product-title">${item.title || 'Untitled'}</div>
       <div class="product-desc">${item.description || ''}</div>
       <div class="product-price">${numericPrice} ${texts.currencySymbol}</div>
-      <button class="buy-btn" ${item.isSold ? 'disabled style="opacity:0.5;"' : ''}>${item.isSold ? texts.sold : texts.buyNow}</button>
+      <button class="buy-btn" data-id="${item.id}" ${item.isSold ? 'disabled style="opacity:0.5;"' : ''}>${item.isSold ? texts.sold : texts.buyNow}</button>
       ${adminControlsHTML}
     `;
 
     productList.appendChild(card);
   });
 
-  // Attach Admin Event Listeners
+  // Attach Stripe Checkout Click Handlers
+  document.querySelectorAll('.buy-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      const docId = e.target.getAttribute('data-id');
+      const product = currentProducts.find(p => p.id === docId);
+
+      if (!product || !product.stripePriceId) {
+        alert('Stripe Price ID missing for this item.');
+        return;
+      }
+
+      const { error } = await stripe.redirectToCheckout({
+        lineItems: [{ price: product.stripePriceId, quantity: 1 }],
+        mode: 'payment',
+        successUrl: window.location.origin + '/success.html',
+        cancelUrl: window.location.origin + '/cancel.html',
+      });
+
+      if (error) {
+        alert(error.message);
+      }
+    };
+  });
+
+  // Admin Update Price Handler
   document.querySelectorAll('.update-btn').forEach(btn => {
     btn.onclick = (e) => {
       const docId = e.target.getAttribute('data-id');
@@ -200,6 +243,7 @@ function renderProducts() {
     };
   });
 
+  // Admin Toggle Sold Handler
   document.querySelectorAll('.toggle-sold-btn').forEach(btn => {
     btn.onclick = (e) => {
       const docId = e.target.getAttribute('data-id');
@@ -209,48 +253,83 @@ function renderProducts() {
   });
 }
 
-// Save New Product
-document.getElementById('add-product-btn').onclick = async () => {
-  const title = document.getElementById('new-title').value;
-  const description = document.getElementById('new-desc').value;
-  const price = Number(document.getElementById('new-price').value);
-  const stripePriceId = document.getElementById('new-stripe-id').value;
-  const fileInput = document.getElementById('new-image');
-  const file = fileInput.files[0];
+// Add New Product with Firebase Storage Image Upload
+const addProductBtn = document.getElementById('add-product-btn');
+if (addProductBtn) {
+  addProductBtn.onclick = async () => {
+    const title = document.getElementById('new-title').value;
+    const description = document.getElementById('new-desc').value;
+    const price = Number(document.getElementById('new-price').value);
+    const stripePriceId = document.getElementById('new-stripe-id').value;
+    const fileInput = document.getElementById('new-image');
+    const file = fileInput.files[0];
 
-  if (!title || !price) {
-    alert('Vyplňte název a cenu');
-    return;
-  }
+    if (!title || !price) {
+      alert('Vyplňte název a cenu');
+      return;
+    }
 
-  let imageUrl = "";
-  if (file) {
-    const fileRef = ref(storage, `products/${Date.now()}_${file.name}`);
-    await uploadBytes(fileRef, file);
-    imageUrl = await getDownloadURL(fileRef);
-  }
+    let imageUrl = "";
+    if (file) {
+      const fileRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      await uploadBytes(fileRef, file);
+      imageUrl = await getDownloadURL(fileRef);
+    }
 
-  await addDoc(collection(db, "products"), {
-    title, description, price, stripePriceId, imageUrl, isSold: false
-  });
+    await addDoc(collection(db, "products"), {
+      title, description, price, stripePriceId, imageUrl, isSold: false
+    });
 
-  alert('Produkt úspěšně vytvořen!');
-  fileInput.value = '';
-};
+    alert('Produkt úspěšně vytvořen!');
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-desc').value = '';
+    document.getElementById('new-price').value = '';
+    document.getElementById('new-stripe-id').value = '';
+    fileInput.value = '';
+  };
+}
 
-// Admin Login/Logout Events
-document.getElementById('admin-toggle-btn').onclick = () => {
-  document.getElementById('admin-panel').classList.toggle('hidden');
-};
+// Submit Custom Commission Request
+const commissionForm = document.getElementById('commission-form');
+if (commissionForm) {
+  commissionForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const description = document.getElementById('description').value;
+    const estimatedPriceCZK = Number(document.getElementById('price').value);
 
-document.getElementById('login-submit-btn').onclick = async () => {
-  const email = document.getElementById('admin-email').value;
-  const pass = document.getElementById('admin-password').value;
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch (err) {
-    alert(err.message);
-  }
-};
+    await addDoc(collection(db, "commissions"), {
+      name, email, description, estimatedPriceCZK, createdAt: new Date()
+    });
 
-document.getElementById('logout-btn').onclick = () => signOut(auth);
+    alert('Poptávka byla úspěšně odeslána!');
+    commissionForm.reset();
+  };
+}
+
+// Admin Panel Toggle & Authentication Handlers
+const adminToggleBtn = document.getElementById('admin-toggle-btn');
+if (adminToggleBtn) {
+  adminToggleBtn.onclick = () => {
+    document.getElementById('admin-panel')?.classList.toggle('hidden');
+  };
+}
+
+const loginSubmitBtn = document.getElementById('login-submit-btn');
+if (loginSubmitBtn) {
+  loginSubmitBtn.onclick = async () => {
+    const email = document.getElementById('admin-email').value;
+    const pass = document.getElementById('admin-password').value;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+}
+
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.onclick = () => signOut(auth);
+}
